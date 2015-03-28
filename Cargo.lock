@@ -1,0 +1,4 @@
+[root]
+name = "rusty-csv-diff"
+version = "0.0.1"
+

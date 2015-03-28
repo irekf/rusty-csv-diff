@@ -1,0 +1,5 @@
+[package]
+
+name = "rusty-csv-diff"
+version = "0.0.1"
+authors = ["Irek Fakhrutdinov <irekfakh@gmail.com>"]
