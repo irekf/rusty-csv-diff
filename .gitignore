@@ -1,5 +1,5 @@
 target
 
-.rlib
+*.rlib
 *.so
 *.o
