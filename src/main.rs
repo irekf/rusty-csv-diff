@@ -20,22 +20,21 @@ impl<'a> std::fmt::Display for CSV_descriptor<'a> {
     }
 }
 
-fn parse_args<'a>(path_arg: &'a String, delimiter_arg: &'a String, quote_arg: &'a String) -> CSV_descriptor<'a> {
+fn parse_args<'a>(path_arg:         &'a String,
+                  delimiter_arg:    &'a String,
+                  quote_arg:        &'a String) -> Result<CSV_descriptor<'a>, &'static str>
+{
 
     let csv_file_path = Path::new(path_arg);
 
     let csv_delimiter = match delimiter_arg.chars().next() {
                             Some(result) => result,
-                            None         => panic!("error parsing delimiter: {}", delimiter_arg),
+                            None         => return Err("error parsing delimiter"),
                         };
 
     let csv_quote     = quote_arg.chars().next();
 
-    CSV_descriptor {
-                        file_path:  &csv_file_path,
-                        delimiter:  csv_delimiter,
-                        quote:      csv_quote
-                   }
+    Ok(CSV_descriptor {file_path: &csv_file_path, delimiter: csv_delimiter, quote: csv_quote})
 }
 
 fn main() {
@@ -66,11 +65,10 @@ For example, ./main file_1.csv "," "'" file_2.csv " " ""
         return;
     };
 
-    for arg in &args {
-        println!("{}", arg);
-    }
-
-    let csv_desc: CSV_descriptor = parse_args(&args[1], &args[2], &args[3]);
+    let csv_desc: CSV_descriptor = match parse_args(&args[1], &args[2], &args[3]) {
+        Err(why)    => panic!("error parsing arguments: {}", why),
+        Ok(result)  => result,
+    };
     println!("{}", csv_desc);
 
     let csv_file = match File::open(csv_desc.file_path) {
