@@ -29,12 +29,42 @@ fn parse_args<'a>(path_arg:         &'a String,
 
     let csv_delimiter = match delimiter_arg.chars().next() {
                             Some(result) => result,
-                            None         => return Err("error parsing delimiter"),
+                            None         => return Err("incorrect delimiter"),
                         };
 
     let csv_quote     = quote_arg.chars().next();
 
     Ok(CSV_descriptor {file_path: &csv_file_path, delimiter: csv_delimiter, quote: csv_quote})
+}
+
+fn get_csv_cols(csv_desc: CSV_descriptor) -> Result<Vec<String>, String> {
+
+    let csv_file = match File::open(csv_desc.file_path) {
+        Err(why) => panic!("couldn't open csv @ {}: {}", csv_desc.file_path.display(), why),
+        Ok(file) => file,
+    };
+
+    let csv_reader = BufReader::new(csv_file);
+
+    let mut csv_line_iter = csv_reader.lines();
+
+    let csv_header: String = match csv_line_iter.next() {
+        Some(result) => match result {
+                            Err(why) => return Err(format!("error getting csv header: {}", why)),
+                            Ok(header) => header,
+                        },
+        None         => return Err("csv header reading failed".to_string()),
+    };
+
+    let csv_cols: Vec<String> = {
+        let cols_iter = csv_header.split(csv_desc.delimiter);
+        match csv_desc.quote {
+            Some(q) => cols_iter.map(|s| {s.trim_matches(q).to_string()}).collect(),
+            None    => cols_iter.map(|s| {s.to_string()}).collect(),
+        }
+    };
+
+    Ok(csv_cols)
 }
 
 fn main() {
@@ -59,6 +89,7 @@ For example, ./main file_1.csv "," "'" file_2.csv " " ""
 
 */
 
+    /*** 1 ***/
     let args: Vec<String> = env::args().collect();
     if args.len() != 7 {
         print_arg_error();
@@ -75,5 +106,8 @@ For example, ./main file_1.csv "," "'" file_2.csv " " ""
         Err(why) => panic!("couldn't open csv @ {}: {}", csv_desc.file_path.display(), why),
         Ok(file) => file,
     };
+
+    /*** 2 ***/
+    //let csv_cols: Vec<String> = get_csv_cols(csv_desc);
 
 }
