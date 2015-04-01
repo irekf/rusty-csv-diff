@@ -4,6 +4,40 @@ use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::str::FromStr;
 
+fn print_arg_error() {
+    println!("incorrect arguments passed");
+}
+
+struct CSV_descriptor<'a> {
+    file_path: &'a  Path,
+    delimiter:      char,
+    quote:          Option<char>,
+}
+
+impl<'a> std::fmt::Display for CSV_descriptor<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{} {} {:?}", self.file_path.display(), self.delimiter, self.quote)
+    }
+}
+
+fn parse_args<'a>(path_arg: &'a String, delimiter_arg: &'a String, quote_arg: &'a String) -> CSV_descriptor<'a> {
+
+    let csv_file_path = Path::new(path_arg);
+
+    let csv_delimiter = match delimiter_arg.chars().next() {
+                            Some(result) => result,
+                            None         => panic!("error parsing delimiter: {}", delimiter_arg),
+                        };
+
+    let csv_quote     = quote_arg.chars().next();
+
+    CSV_descriptor {
+                        file_path:  &csv_file_path,
+                        delimiter:  csv_delimiter,
+                        quote:      csv_quote
+                   }
+}
+
 fn main() {
 
 /*
@@ -25,5 +59,23 @@ Input parameters: CSV paths, delimiters, quotes
 For example, ./main file_1.csv "," "'" file_2.csv " " "" 
 
 */
+
+    let args: Vec<String> = env::args().collect();
+    if args.len() != 7 {
+        print_arg_error();
+        return;
+    };
+
+    for arg in &args {
+        println!("{}", arg);
+    }
+
+    let csv_desc: CSV_descriptor = parse_args(&args[1], &args[2], &args[3]);
+    println!("{}", csv_desc);
+
+    let csv_file = match File::open(csv_desc.file_path) {
+        Err(why) => panic!("couldn't open csv @ {}: {}", csv_desc.file_path.display(), why),
+        Ok(file) => file,
+    };
 
 }
