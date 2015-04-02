@@ -3,19 +3,18 @@ use std::env;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
-use std::str::FromStr;
 
 fn print_arg_error() {
     println!("incorrect arguments passed");
 }
 
-struct CSV_descriptor<'a> {
+struct CsvDescriptor<'a> {
     file_path: &'a  Path,
     delimiter:      char,
     quote:          Option<char>,
 }
 
-impl<'a> std::fmt::Display for CSV_descriptor<'a> {
+impl<'a> std::fmt::Display for CsvDescriptor<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{} {} {:?}", self.file_path.display(), self.delimiter, self.quote)
     }
@@ -23,7 +22,7 @@ impl<'a> std::fmt::Display for CSV_descriptor<'a> {
 
 fn parse_args<'a>(path_arg:         &'a String,
                   delimiter_arg:    &'a String,
-                  quote_arg:        &'a String) -> Result<CSV_descriptor<'a>, &'static str>
+                  quote_arg:        &'a String) -> Result<CsvDescriptor<'a>, &'static str>
 {
 
     let csv_file_path = Path::new(path_arg);
@@ -35,10 +34,10 @@ fn parse_args<'a>(path_arg:         &'a String,
 
     let csv_quote     = quote_arg.chars().next();
 
-    Ok(CSV_descriptor {file_path: &csv_file_path, delimiter: csv_delimiter, quote: csv_quote})
+    Ok(CsvDescriptor {file_path: &csv_file_path, delimiter: csv_delimiter, quote: csv_quote})
 }
 
-fn get_csv_cols(csv_desc: CSV_descriptor) -> Result<Vec<String>, String> {
+fn get_csv_cols(csv_desc: CsvDescriptor) -> Result<Vec<String>, String> {
 
     let csv_file = match File::open(csv_desc.file_path) {
         Err(why) => panic!("couldn't open csv @ {}: {}", csv_desc.file_path.display(), why),
@@ -97,12 +96,12 @@ For example, ./main file_1.csv "," "'" file_2.csv " " ""
         return;
     };
 
-    let csv_desc_1: CSV_descriptor = match parse_args(&args[1], &args[2], &args[3]) {
+    let csv_desc_1: CsvDescriptor = match parse_args(&args[1], &args[2], &args[3]) {
         Err(why)    => panic!("error parsing arguments for CSV #1: {}", why),
         Ok(result)  => result,
     };
 
-    let csv_desc_2: CSV_descriptor = match parse_args(&args[4], &args[5], &args[6]) {
+    let csv_desc_2: CsvDescriptor = match parse_args(&args[4], &args[5], &args[6]) {
         Err(why)    => panic!("error parsing arguments for CSV #2: {}", why),
         Ok(result)  => result,
     };
