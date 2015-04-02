@@ -1,3 +1,4 @@
+use std::collections::{HashSet, HashMap};
 use std::env;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -96,18 +97,52 @@ For example, ./main file_1.csv "," "'" file_2.csv " " ""
         return;
     };
 
-    let csv_desc: CSV_descriptor = match parse_args(&args[1], &args[2], &args[3]) {
-        Err(why)    => panic!("error parsing arguments: {}", why),
+    let csv_desc_1: CSV_descriptor = match parse_args(&args[1], &args[2], &args[3]) {
+        Err(why)    => panic!("error parsing arguments for CSV #1: {}", why),
         Ok(result)  => result,
     };
-    println!("{}", csv_desc);
 
-    let csv_file = match File::open(csv_desc.file_path) {
-        Err(why) => panic!("couldn't open csv @ {}: {}", csv_desc.file_path.display(), why),
-        Ok(file) => file,
+    let csv_desc_2: CSV_descriptor = match parse_args(&args[4], &args[5], &args[6]) {
+        Err(why)    => panic!("error parsing arguments for CSV #2: {}", why),
+        Ok(result)  => result,
     };
 
-    /*** 2 ***/
-    //let csv_cols: Vec<String> = get_csv_cols(csv_desc);
+    /*** 2&3 ***/
+    let csv_cols_1: Vec<String> = match get_csv_cols(csv_desc_1) {
+        Err(why) => panic!("couldn't get columns: {}", why),
+        Ok(cols) => cols,
+    };
 
+    let csv_cols_2: Vec<String> = match get_csv_cols(csv_desc_2) {
+        Err(why) => panic!("couldn't get columns: {}", why),
+        Ok(cols) => cols,
+    };
+
+    /*** 5 ***/
+    let mut csv_col_index_1 = HashMap::new();
+    for i in 0..csv_cols_1.len() {
+        let key = csv_cols_1[i].clone();
+        if csv_col_index_1.contains_key(&key) {
+            panic!("duplicate column found in CSV #1: {}", key);
+        };
+        csv_col_index_1.insert(key, i);
+    }
+
+    let mut csv_col_index_2 = HashMap::new();
+    for i in 0..csv_cols_2.len() {
+        let key = csv_cols_2[i].clone();
+        if csv_col_index_2.contains_key(&key) {
+            panic!("duplicate column found in CSV #1: {}", key);
+        };
+        csv_col_index_2.insert(key, i);
+    }
+
+    /*** 4 ***/
+    let mut cols_to_compare = HashSet::new();
+    for col_1 in csv_col_index_1.keys() {
+        if csv_col_index_2.contains_key(col_1) {
+            cols_to_compare.insert(col_1);
+        };
+    }
+    println!("{:?}", cols_to_compare);
 }
