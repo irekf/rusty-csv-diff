@@ -67,6 +67,48 @@ fn get_csv_cols(csv_desc: CsvDescriptor) -> Result<Vec<String>, String> {
     Ok(csv_cols)
 }
 
+fn build_index(csv_desc: CsvDescriptor) -> Result<HashMap<String, usize>, String> {
+    // TODO it would probably be better to keep a File in the csv descriptor instead of a Path
+    let mut csv_index = HashMap::new();
+    let csv_file = match File::open(csv_desc.file_path) {
+        Err(why) => panic!("couldn't open csv @ {}: {}", csv_desc.file_path.display(), why),
+        Ok(file) => file,
+    };
+
+    let csv_reader = BufReader::new(csv_file);
+
+    let mut csv_line_iter = csv_reader.lines().skip(1);
+
+    let mut line_index = 0;
+    loop {
+
+        let csv_row: String = match csv_line_iter.next() {
+            Some(result) => match result {
+                                Err(why) => return Err(format!("error getting csv row: {}", why)),
+                                Ok(header) => header,
+                            },
+            None         => break,
+        };
+
+        let csv_cols: Vec<String> = {
+            let cols_iter = csv_row.split(csv_desc.delimiter);
+            match csv_desc.quote {
+                Some(q) => cols_iter.map(|s| {s.trim_matches(q).to_string()}).collect(),
+                None    => cols_iter.map(|s| {s.to_string()}).collect(),
+            }
+        };
+
+        // TODO: check if all lines have the same number of columns
+        let key = format!("{}{}", csv_cols[0], csv_cols[1]);
+        csv_index.insert(key, line_index);
+
+        line_index += 1;
+    }
+
+    Ok(csv_index)
+}
+
+
 fn main() {
 
 /*
@@ -144,4 +186,7 @@ For example, ./main file_1.csv "," "'" file_2.csv " " ""
         };
     }
     println!("{:?}", cols_to_compare);
+
+    /*** 6 ***/
+    // let's assume that the unique key is (col_0 + col_1)
 }
