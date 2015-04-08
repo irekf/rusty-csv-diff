@@ -117,7 +117,7 @@ fn get_csv_row(csv_desc: &CsvDescriptor, line_num: usize) -> Result<Vec<String>,
 
     let csv_reader = BufReader::new(csv_file);
 
-    let mut csv_line_iter = csv_reader.lines().skip(line_num);
+    let mut csv_line_iter = csv_reader.lines().skip(line_num + 1);
 
     let csv_row: String = match csv_line_iter.next() {
         Some(result) => match result {
@@ -197,6 +197,7 @@ For example, ./main file_1.csv "," "'" file_2.csv " " ""
         };
         csv_col_index_1.insert(key, i);
     }
+    println!("{:?}", csv_col_index_1);
 
     let mut csv_col_index_2 = HashMap::new();
     for i in 0..csv_cols_2.len() {
@@ -206,6 +207,7 @@ For example, ./main file_1.csv "," "'" file_2.csv " " ""
         };
         csv_col_index_2.insert(key, i);
     }
+    println!("{:?}", csv_col_index_2);
 
     /*** 4 ***/
     let mut cols_to_compare = HashSet::new();
@@ -247,9 +249,17 @@ For example, ./main file_1.csv "," "'" file_2.csv " " ""
         let row_1 = get_csv_row(&csv_desc_1, index_1).unwrap(); // TODO: handle me
         let row_2 = get_csv_row(&csv_desc_2, index_2).unwrap();
 
+        println!("comparing {}:", row_key);
+        println!("line #1: {:?}", row_1);
+        println!("line #2: {:?}", row_2);
+
         for col in &cols_to_compare {
+
             let col_index_1 = *csv_col_index_1.get(*col).unwrap(); // TODO: handle me
             let col_index_2 = *csv_col_index_2.get(*col).unwrap();
+
+            println!("column {}, index_1={}, index_2={}", col, col_index_1, col_index_2);
+
             if row_1[col_index_1] != row_2[col_index_2] {
                 println!("found a difference for {}, {}: {} / {}", row_key, col, row_1[col_index_1], row_2[col_index_2]);
             }
