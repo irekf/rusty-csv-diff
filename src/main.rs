@@ -37,7 +37,7 @@ fn parse_args<'a>(path_arg:         &'a String,
     Ok(CsvDescriptor {file_path: &csv_file_path, delimiter: csv_delimiter, quote: csv_quote})
 }
 
-fn get_csv_cols(csv_desc: CsvDescriptor) -> Result<Vec<String>, String> {
+fn get_csv_cols(csv_desc: &CsvDescriptor) -> Result<Vec<String>, String> {
 
     let csv_file = match File::open(csv_desc.file_path) {
         Err(why) => panic!("couldn't open csv @ {}: {}", csv_desc.file_path.display(), why),
@@ -67,7 +67,7 @@ fn get_csv_cols(csv_desc: CsvDescriptor) -> Result<Vec<String>, String> {
     Ok(csv_cols)
 }
 
-fn build_index(csv_desc: CsvDescriptor) -> Result<HashMap<String, usize>, String> {
+fn build_index(csv_desc: &CsvDescriptor) -> Result<HashMap<String, usize>, String> {
     // TODO it would probably be better to keep a File in the csv descriptor instead of a Path
     let mut csv_index = HashMap::new();
     let csv_file = match File::open(csv_desc.file_path) {
@@ -108,6 +108,35 @@ fn build_index(csv_desc: CsvDescriptor) -> Result<HashMap<String, usize>, String
     Ok(csv_index)
 }
 
+fn get_csv_row(csv_desc: &CsvDescriptor, line_num: usize) -> Result<Vec<String>, String> {
+
+    let csv_file = match File::open(csv_desc.file_path) {
+        Err(why) => panic!("couldn't open csv @ {}: {}", csv_desc.file_path.display(), why),
+        Ok(file) => file,
+    };
+
+    let csv_reader = BufReader::new(csv_file);
+
+    let mut csv_line_iter = csv_reader.lines().skip(line_num);
+
+    let csv_row: String = match csv_line_iter.next() {
+        Some(result) => match result {
+                            Err(why) => return Err(format!("error getting csv row: {}", why)),
+                            Ok(row) => row,
+                        },
+        None         => return Err("csv row reading failed".to_string()),
+    };
+
+    let result: Vec<String> = {
+        let cols_iter = csv_row.split(csv_desc.delimiter);
+        match csv_desc.quote {
+            Some(q) => cols_iter.map(|s| {s.trim_matches(q).to_string()}).collect(),
+            None    => cols_iter.map(|s| {s.to_string()}).collect(),
+        }
+    };
+
+    Ok(result)
+}
 
 fn main() {
 
@@ -149,12 +178,12 @@ For example, ./main file_1.csv "," "'" file_2.csv " " ""
     };
 
     /*** 2&3 ***/
-    let csv_cols_1: Vec<String> = match get_csv_cols(csv_desc_1) {
+    let csv_cols_1: Vec<String> = match get_csv_cols(&csv_desc_1) {
         Err(why) => panic!("couldn't get columns: {}", why),
         Ok(cols) => cols,
     };
 
-    let csv_cols_2: Vec<String> = match get_csv_cols(csv_desc_2) {
+    let csv_cols_2: Vec<String> = match get_csv_cols(&csv_desc_2) {
         Err(why) => panic!("couldn't get columns: {}", why),
         Ok(cols) => cols,
     };
@@ -189,4 +218,43 @@ For example, ./main file_1.csv "," "'" file_2.csv " " ""
 
     /*** 6 ***/
     // let's assume that the unique key is (col_0 + col_1)
+    let csv_index_1 = match build_index(&csv_desc_1) {
+        Err(why)  => panic!("failed building index #1: {}", why),
+        Ok(index) => index,
+    };
+
+
+    let csv_index_2 = match build_index(&csv_desc_2) {
+        Err(why)  => panic!("failed building index #2: {}", why),
+        Ok(index) => index,
+    };
+
+    /*** 7 ***/
+    let mut row_keys_to_compare = HashSet::new();
+    for key_1 in csv_index_1.keys() {
+        if csv_index_2.contains_key(key_1) {
+            row_keys_to_compare.insert(key_1);
+        };
+    }
+    println!("{:?}", row_keys_to_compare);
+
+    /*** 8 ***/
+    for row_key in row_keys_to_compare {
+
+        let index_1 = *csv_index_1.get(row_key).unwrap(); // TODO: handle me
+        let index_2 = *csv_index_2.get(row_key).unwrap();
+
+        let row_1 = get_csv_row(&csv_desc_1, index_1).unwrap(); // TODO: handle me
+        let row_2 = get_csv_row(&csv_desc_2, index_2).unwrap();
+
+        for col in &cols_to_compare {
+            let col_index_1 = *csv_col_index_1.get(*col).unwrap(); // TODO: handle me
+            let col_index_2 = *csv_col_index_2.get(*col).unwrap();
+            if row_1[col_index_1] != row_2[col_index_2] {
+                println!("found a difference for {}, {}: {} / {}", row_key, col, row_1[col_index_1], row_2[col_index_2]);
+            }
+        }
+
+    }
+
 }
