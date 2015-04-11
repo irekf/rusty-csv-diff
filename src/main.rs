@@ -8,13 +8,13 @@ fn print_arg_error() {
     println!("incorrect arguments passed");
 }
 
-struct CsvDescriptor<'a> {
+struct CsvDesc<'a> {
     file_path: &'a  Path,
     delimiter:      char,
     quote:          Option<char>,
 }
 
-impl<'a> std::fmt::Display for CsvDescriptor<'a> {
+impl<'a> std::fmt::Display for CsvDesc<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{} {} {:?}", self.file_path.display(), self.delimiter, self.quote)
     }
@@ -22,7 +22,7 @@ impl<'a> std::fmt::Display for CsvDescriptor<'a> {
 
 fn parse_args<'a>(path_arg:         &'a String,
                   delimiter_arg:    &'a String,
-                  quote_arg:        &'a String) -> Result<CsvDescriptor<'a>, &'static str>
+                  quote_arg:        &'a String) -> Result<CsvDesc<'a>, &'static str>
 {
 
     let csv_file_path = Path::new(path_arg);
@@ -34,10 +34,10 @@ fn parse_args<'a>(path_arg:         &'a String,
 
     let csv_quote     = quote_arg.chars().next();
 
-    Ok(CsvDescriptor {file_path: &csv_file_path, delimiter: csv_delimiter, quote: csv_quote})
+    Ok(CsvDesc {file_path: &csv_file_path, delimiter: csv_delimiter, quote: csv_quote})
 }
 
-fn get_csv_cols(csv_desc: &CsvDescriptor) -> Result<Vec<String>, String> {
+fn get_csv_cols(csv_desc: &CsvDesc) -> Result<Vec<String>, String> {
 
     let csv_file = match File::open(csv_desc.file_path) {
         Err(why) => panic!("couldn't open csv @ {}: {}", csv_desc.file_path.display(), why),
@@ -67,7 +67,7 @@ fn get_csv_cols(csv_desc: &CsvDescriptor) -> Result<Vec<String>, String> {
     Ok(csv_cols)
 }
 
-fn build_index(csv_desc: &CsvDescriptor) -> Result<HashMap<String, usize>, String> {
+fn build_index(csv_desc: &CsvDesc) -> Result<HashMap<String, usize>, String> {
     // TODO it would probably be better to keep a File in the csv descriptor instead of a Path
     let mut csv_index = HashMap::new();
     let csv_file = match File::open(csv_desc.file_path) {
@@ -108,7 +108,7 @@ fn build_index(csv_desc: &CsvDescriptor) -> Result<HashMap<String, usize>, Strin
     Ok(csv_index)
 }
 
-fn build_index_2(csv_desc: &CsvDescriptor) -> Result<HashMap<String, u64>, String> {
+fn build_index_2(csv_desc: &CsvDesc) -> Result<HashMap<String, u64>, String> {
     // TODO it would probably be better to keep a File in the csv descriptor instead of a Path
     let mut csv_index = HashMap::new();
     let csv_file = match File::open(csv_desc.file_path) {
@@ -148,7 +148,7 @@ fn build_index_2(csv_desc: &CsvDescriptor) -> Result<HashMap<String, u64>, Strin
     Ok(csv_index)
 }
 
-fn get_csv_row(csv_desc: &CsvDescriptor, line_num: usize) -> Result<Vec<String>, String> {
+fn get_csv_row(csv_desc: &CsvDesc, line_num: usize) -> Result<Vec<String>, String> {
 
     let csv_file = match File::open(csv_desc.file_path) {
         Err(why) => panic!("couldn't open csv @ {}: {}", csv_desc.file_path.display(), why),
@@ -178,7 +178,7 @@ fn get_csv_row(csv_desc: &CsvDescriptor, line_num: usize) -> Result<Vec<String>,
     Ok(result)
 }
 
-fn get_csv_row_2(csv_desc: &CsvDescriptor, line_offset: u64) -> Result<Vec<String>, String> {
+fn get_csv_row_2(csv_desc: &CsvDesc, line_offset: u64) -> Result<Vec<String>, String> {
 
     let mut csv_file = match File::open(csv_desc.file_path) {
         Err(why) => panic!("couldn't open csv @ {}: {}", csv_desc.file_path.display(), why),
@@ -239,12 +239,12 @@ For example, ./main file_1.csv "," "'" file_2.csv " " ""
         return;
     };
 
-    let csv_desc_1: CsvDescriptor = match parse_args(&args[1], &args[2], &args[3]) {
+    let csv_desc_1: CsvDesc = match parse_args(&args[1], &args[2], &args[3]) {
         Err(why)    => panic!("error parsing arguments for CSV #1: {}", why),
         Ok(result)  => result,
     };
 
-    let csv_desc_2: CsvDescriptor = match parse_args(&args[4], &args[5], &args[6]) {
+    let csv_desc_2: CsvDesc = match parse_args(&args[4], &args[5], &args[6]) {
         Err(why)    => panic!("error parsing arguments for CSV #2: {}", why),
         Ok(result)  => result,
     };
