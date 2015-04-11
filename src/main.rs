@@ -1,11 +1,30 @@
+#[macro_use]
+extern crate log;
+
 use std::collections::{HashSet, HashMap};
 use std::env;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Seek, SeekFrom};
 use std::path::Path;
 
+use log::{LogRecord, LogLevel, LogLevelFilter, LogMetadata};
+
+struct SimpleLogger;
+
+impl log::Log for SimpleLogger {
+    fn enabled(&self, metadata: &LogMetadata) -> bool {
+        metadata.level() <= LogLevel::Info
+    }
+
+    fn log(&self, record: &LogRecord) {
+        if self.enabled(record.metadata()) {
+            println!("{} - {}", record.level(), record.args());
+        }
+    }
+}
+
 fn print_arg_error() {
-    println!("incorrect arguments passed");
+    info!("incorrect arguments passed");
 }
 
 struct CsvDesc<'a> {
@@ -232,6 +251,12 @@ For example, ./main file_1.csv "," "'" file_2.csv " " ""
 
 */
 
+    /*** 0 ***/
+    log::set_logger(|max_log_level| {
+        max_log_level.set(LogLevelFilter::Info);
+        Box::new(SimpleLogger)
+    }).unwrap();
+
     /*** 1 ***/
     let args: Vec<String> = env::args().collect();
     if args.len() != 7 {
@@ -269,7 +294,7 @@ For example, ./main file_1.csv "," "'" file_2.csv " " ""
         };
         csv_col_index_1.insert(key, i);
     }
-    println!("{:?}", csv_col_index_1);
+    info!("{:?}", csv_col_index_1);
 
     let mut csv_col_index_2 = HashMap::new();
     for i in 0..csv_cols_2.len() {
@@ -279,7 +304,7 @@ For example, ./main file_1.csv "," "'" file_2.csv " " ""
         };
         csv_col_index_2.insert(key, i);
     }
-    println!("{:?}", csv_col_index_2);
+    info!("{:?}", csv_col_index_2);
 
     /*** 4 ***/
     let mut cols_to_compare = HashSet::new();
@@ -288,7 +313,7 @@ For example, ./main file_1.csv "," "'" file_2.csv " " ""
             cols_to_compare.insert(col_1);
         };
     }
-    println!("{:?}", cols_to_compare);
+    info!("{:?}", cols_to_compare);
 
     /*** 6 ***/
     // let's assume that the unique key is (col_0 + col_1)
@@ -310,7 +335,7 @@ For example, ./main file_1.csv "," "'" file_2.csv " " ""
             row_keys_to_compare.insert(key_1);
         };
     }
-    println!("{:?}", row_keys_to_compare);
+    info!("{:?}", row_keys_to_compare);
 
     /*** 8 ***/
     for row_key in row_keys_to_compare {
@@ -321,16 +346,16 @@ For example, ./main file_1.csv "," "'" file_2.csv " " ""
         let row_1 = get_csv_row_2(&csv_desc_1, index_1).unwrap(); // TODO: handle me
         let row_2 = get_csv_row_2(&csv_desc_2, index_2).unwrap();
 
-        println!("comparing {}:", row_key);
-        println!("line #1: {:?}", row_1);
-        println!("line #2: {:?}", row_2);
+        info!("comparing {}:", row_key);
+        info!("line #1: {:?}", row_1);
+        info!("line #2: {:?}", row_2);
 
         for col in &cols_to_compare {
 
             let col_index_1 = *csv_col_index_1.get(*col).unwrap(); // TODO: handle me
             let col_index_2 = *csv_col_index_2.get(*col).unwrap();
 
-            println!("column {}, index_1={}, index_2={}", col, col_index_1, col_index_2);
+            info!("column {}, index_1={}, index_2={}", col, col_index_1, col_index_2);
 
             if row_1[col_index_1] != row_2[col_index_2] {
                 println!("found a difference for {}, {}: {} / {}", row_key, col, row_1[col_index_1], row_2[col_index_2]);
