@@ -1,7 +1,7 @@
 use std::collections::{HashSet, HashMap};
 use std::env;
 use std::fs::File;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Seek, SeekFrom};
 use std::path::Path;
 
 fn print_arg_error() {
@@ -108,6 +108,46 @@ fn build_index(csv_desc: &CsvDescriptor) -> Result<HashMap<String, usize>, Strin
     Ok(csv_index)
 }
 
+fn build_index_2(csv_desc: &CsvDescriptor) -> Result<HashMap<String, u64>, String> {
+    // TODO it would probably be better to keep a File in the csv descriptor instead of a Path
+    let mut csv_index = HashMap::new();
+    let csv_file = match File::open(csv_desc.file_path) {
+        Err(why) => panic!("couldn't open csv @ {}: {}", csv_desc.file_path.display(), why),
+        Ok(file) => file,
+    };
+
+    let csv_reader = BufReader::new(csv_file);
+    let mut csv_line_iter = csv_reader.lines();
+
+    let mut offset_in_file: u64 = 0;
+    loop {
+
+        let csv_row: String = match csv_line_iter.next() {
+            Some(result) => match result {
+                                Err(why) => return Err(format!("error getting csv row: {}", why)),
+                                Ok(header) => header,
+                            },
+            None         => break,
+        };
+
+        let csv_cols: Vec<String> = {
+            let cols_iter = csv_row.split(csv_desc.delimiter);
+            match csv_desc.quote {
+                Some(q) => cols_iter.map(|s| {s.trim_matches(q).to_string()}).collect(),
+                None    => cols_iter.map(|s| {s.to_string()}).collect(),
+            }
+        };
+
+        // TODO: check if all lines have the same number of columns
+        let key = format!("{}{}", csv_cols[0], csv_cols[1]);
+
+        csv_index.insert(key, offset_in_file);
+        offset_in_file += (csv_row.len() + 1) as u64;
+    }
+
+    Ok(csv_index)
+}
+
 fn get_csv_row(csv_desc: &CsvDescriptor, line_num: usize) -> Result<Vec<String>, String> {
 
     let csv_file = match File::open(csv_desc.file_path) {
@@ -129,6 +169,38 @@ fn get_csv_row(csv_desc: &CsvDescriptor, line_num: usize) -> Result<Vec<String>,
 
     let result: Vec<String> = {
         let cols_iter = csv_row.split(csv_desc.delimiter);
+        match csv_desc.quote {
+            Some(q) => cols_iter.map(|s| {s.trim_matches(q).to_string()}).collect(),
+            None    => cols_iter.map(|s| {s.to_string()}).collect(),
+        }
+    };
+
+    Ok(result)
+}
+
+fn get_csv_row_2(csv_desc: &CsvDescriptor, line_offset: u64) -> Result<Vec<String>, String> {
+
+    let mut csv_file = match File::open(csv_desc.file_path) {
+        Err(why) => panic!("couldn't open csv @ {}: {}", csv_desc.file_path.display(), why),
+        Ok(file) => file,
+    };
+
+    csv_file.seek(SeekFrom::Start(line_offset)).unwrap(); // TODO: handle me
+
+    let mut csv_reader = BufReader::new(csv_file);
+    let mut row_buff = String::new();
+
+    match csv_reader.read_line(&mut row_buff) {
+        Ok(_n)  => {
+            if row_buff.ends_with("\n") {
+                row_buff.pop();
+            }
+        }
+        Err(e) => return Err(format!("error gettig csv row: {}", e)),
+    };
+
+    let result: Vec<String> = {
+        let cols_iter = row_buff.split(csv_desc.delimiter);
         match csv_desc.quote {
             Some(q) => cols_iter.map(|s| {s.trim_matches(q).to_string()}).collect(),
             None    => cols_iter.map(|s| {s.to_string()}).collect(),
@@ -220,13 +292,13 @@ For example, ./main file_1.csv "," "'" file_2.csv " " ""
 
     /*** 6 ***/
     // let's assume that the unique key is (col_0 + col_1)
-    let csv_index_1 = match build_index(&csv_desc_1) {
+    let csv_index_1 = match build_index_2(&csv_desc_1) {
         Err(why)  => panic!("failed building index #1: {}", why),
         Ok(index) => index,
     };
 
 
-    let csv_index_2 = match build_index(&csv_desc_2) {
+    let csv_index_2 = match build_index_2(&csv_desc_2) {
         Err(why)  => panic!("failed building index #2: {}", why),
         Ok(index) => index,
     };
@@ -246,8 +318,8 @@ For example, ./main file_1.csv "," "'" file_2.csv " " ""
         let index_1 = *csv_index_1.get(row_key).unwrap(); // TODO: handle me
         let index_2 = *csv_index_2.get(row_key).unwrap();
 
-        let row_1 = get_csv_row(&csv_desc_1, index_1).unwrap(); // TODO: handle me
-        let row_2 = get_csv_row(&csv_desc_2, index_2).unwrap();
+        let row_1 = get_csv_row_2(&csv_desc_1, index_1).unwrap(); // TODO: handle me
+        let row_2 = get_csv_row_2(&csv_desc_2, index_2).unwrap();
 
         println!("comparing {}:", row_key);
         println!("line #1: {:?}", row_1);
