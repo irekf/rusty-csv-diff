@@ -2,6 +2,7 @@ from collections import defaultdict
 from optparse import OptionParser
 
 import csvgen
+import shuffle
 import sys
 
 # CSV tools
@@ -19,6 +20,9 @@ def generate_csv(options, args):
 
 def shuffle_csv(options, args):
     print("shuffling a CSV file...")
+    input_path = options.input_file_name
+    output_path = options.output_file_name
+    shuffle.shuffle_csv(input_path, output_path)
 
 def unknown_tool(options, args):
     print("unknown tool found, please use either \"gen\" or \"shuffle\"")
@@ -54,7 +58,7 @@ def get_opt_parser(tool):
                 action="store", type="string", dest="input_file_name",
                 help="name of input CSV file")
         parser.add_option("-o", "--output",
-                action="store", type="string", dest="out_file_name",
+                action="store", type="string", dest="output_file_name",
                 help="name of output CSV file")
     else:
         pass
@@ -70,6 +74,11 @@ def parse_args(tool_name, opt_parser, args):
             opt_parser.error("row number not given")
         if options.col_num is None:
             opt_parser.error("col_number not fiven")
+    elif tool_name == TOOL_SHUFFLE:
+        if options.input_file_name is None:
+            opt_parser.error("input file name not given")
+        if options.output_file_name is None:
+            opt_parser.error("output file name not given")
     else:
         pass
 
