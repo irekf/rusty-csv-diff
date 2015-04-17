@@ -36,31 +36,36 @@ tools = defaultdict(get_default_tool, {TOOL_GEN : generate_csv,
 def get_arg_parser(tool):
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("tool", type=str,
-                        help="CSV tool, [gen | shuffle]")
 
     if tool == TOOL_GEN:
+        parser.add_argument("gen", type=str,
+                            help="CSV generate tool")
         parser.add_argument("row_num", type=int, help="number of rows in CSV")
         parser.add_argument("col_num", type=int, help="number of columns in CSV")
         parser.add_argument("output_file", type=str, help="name of output file")
         parser.add_argument("-d", "--delimiter",
-                action="store", type=str, dest="delim",
+                action="store", type=str, dest="delim", default=',',
                 help="delimiter used in  output CSV file")
         parser.add_argument("-q", "--quote",
-                action="store", type=str, dest="quote",
+                action="store", type=str, dest="quote", default='\'',
                 help="quote used in  output CSV file")
     elif tool == TOOL_SHUFFLE:
+        parser.add_argument("shuffle", type=str,
+                            help="shuffle tool")
         parser.add_argument("input_file", type=str, help="name of input CSV file")
         parser.add_argument("output_file", type=str, help="name of output CSV file")
     else:
-        pass
+        parser.add_argument("tool", type=str, choices=["gen", "shuffle"],
+                            help="CSV tool")
 
     return parser
 
 def main():
 
-    tool_name = sys.argv[1]
-    args = sys.argv[2:]
+    try:
+        tool_name = sys.argv[1]
+    except IndexError:
+        tool_name = None
 
     arg_parser = get_arg_parser(tool_name)
 

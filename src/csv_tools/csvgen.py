@@ -3,9 +3,7 @@ import string
 
 MAX_COL_SIZE = 32
 
-def col_generator(col_num, quote=None):
-    if quote == None:
-        quote = '\''
+def col_generator(col_num, quote):
     i = 0
     while i < col_num:
         col_val = ''.join(random.choice(string.ascii_uppercase + \
@@ -16,9 +14,7 @@ def col_generator(col_num, quote=None):
         i += 1
 
 
-def row_generator(row_num, col_num, delim=None, quote=None):
-    if delim == None:
-        delim = ','
+def row_generator(row_num, col_num, delim, quote):
     i = 0
     while i < row_num:
         yield delim.join(col for col in col_generator(col_num, quote))
