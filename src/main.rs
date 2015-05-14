@@ -98,6 +98,8 @@ fn build_index(csv_desc: &CsvDesc) -> Result<HashMap<String, u64>, String> {
     let mut csv_line_iter = csv_reader.lines();
 
     let mut offset_in_file: u64 = 0;
+    let mut prev_col_num = -1;
+    let mut row_idx = 0;
     loop {
 
         let csv_row: String = match csv_line_iter.next() {
@@ -116,7 +118,15 @@ fn build_index(csv_desc: &CsvDesc) -> Result<HashMap<String, u64>, String> {
             }
         };
 
-        // TODO: check if all lines have the same number of columns
+        let curr_col_num = csv_cols.len();
+        if prev_col_num != -1 && prev_col_num != curr_col_num {
+            return Err(format!("{} columns in row #{}, {} columns in previous row", curr_col_num,
+                                                                                    row_idx,
+                                                                                    prev_col_num));
+        }
+        prev_col_num = curr_col_num;
+        row_idx += 1;
+
         let key = format!("{}{}", csv_cols[0], csv_cols[1]);
 
         csv_index.insert(key, offset_in_file);
@@ -182,7 +192,7 @@ For example, ./main file_1.csv "," "'" file_2.csv " " ""
 
     /*** 0 ***/
     log::set_logger(|max_log_level| {
-        max_log_level.set(LogLevelFilter::Info);
+        max_log_level.set(LogLevelFilter::Error);
         Box::new(SimpleLogger)
     }).unwrap();
 
