@@ -1,13 +1,15 @@
+extern crate rustc_serialize;
+extern crate docopt;
+use docopt::Docopt;
+
 #[macro_use]
 extern crate log;
+use log::{LogRecord, LogLevel, LogLevelFilter, LogMetadata};
 
 use std::collections::{HashSet, HashMap};
-use std::env;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Seek, SeekFrom};
 use std::path::Path;
-
-use log::{LogRecord, LogLevel, LogLevelFilter, LogMetadata};
 
 struct SimpleLogger;
 
@@ -21,10 +23,6 @@ impl log::Log for SimpleLogger {
             println!("{} - {}", record.level(), record.args());
         }
     }
-}
-
-fn print_arg_error() {
-    info!("incorrect arguments passed");
 }
 
 struct CsvDesc<'a> {
@@ -168,6 +166,24 @@ fn get_csv_row(csv_desc: &CsvDesc, line_offset: u64) -> Result<Vec<String>, Stri
     Ok(result)
 }
 
+static USAGE: &'static str = "
+Usage: rusty-csv-diff <csv1> <delim1> <quote1> <csv2> <delim2> <quote2>
+       rusty-csv-diff --help
+
+Options:
+    -h, --help        Show this message.
+";
+
+#[derive(RustcDecodable, Debug)]
+struct Args {
+    arg_csv1: String,
+    arg_delim1: String,
+    arg_quote1: String,
+    arg_csv2: String,
+    arg_delim2: String,
+    arg_quote2: String,
+}
+
 fn main() {
 
 /*
@@ -197,18 +213,16 @@ For example, ./main file_1.csv "," "'" file_2.csv " " ""
     }).unwrap();
 
     /*** 1 ***/
-    let args: Vec<String> = env::args().collect();
-    if args.len() != 7 {
-        print_arg_error();
-        return;
-    };
+    let args: Args = Docopt::new(USAGE)
+                            .and_then(|d| d.decode())
+                            .unwrap_or_else(|e| e.exit());
 
-    let csv_desc_1: CsvDesc = match parse_args(&args[1], &args[2], &args[3]) {
+    let csv_desc_1: CsvDesc = match parse_args(&args.arg_csv1, &args.arg_delim1, &args.arg_quote1) {
         Err(why)    => panic!("error parsing arguments for CSV #1: {}", why),
         Ok(result)  => result,
     };
 
-    let csv_desc_2: CsvDesc = match parse_args(&args[4], &args[5], &args[6]) {
+    let csv_desc_2: CsvDesc = match parse_args(&args.arg_csv2, &args.arg_delim2, &args.arg_quote2) {
         Err(why)    => panic!("error parsing arguments for CSV #2: {}", why),
         Ok(result)  => result,
     };
