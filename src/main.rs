@@ -141,7 +141,9 @@ fn get_csv_row(csv_desc: &CsvDesc, line_offset: u64) -> Result<Vec<String>, Stri
         Ok(file) => file,
     };
 
-    csv_file.seek(SeekFrom::Start(line_offset)).unwrap(); // TODO: handle me
+    if let Err(e) = csv_file.seek(SeekFrom::Start(line_offset)) {
+        return Err(format!("error seeking offset: {}", e));
+    }
 
     let mut csv_reader = BufReader::new(csv_file);
     let mut row_buff = String::new();
@@ -293,11 +295,18 @@ For example, ./main file_1.csv "," "'" file_2.csv " " ""
     /*** 8 ***/
     for row_key in row_keys_to_compare {
 
-        let index_1 = *csv_index_1.get(row_key).unwrap(); // TODO: handle me
+        let index_1 = *csv_index_1.get(row_key).unwrap();
         let index_2 = *csv_index_2.get(row_key).unwrap();
 
-        let row_1 = get_csv_row(&csv_desc_1, index_1).unwrap(); // TODO: handle me
-        let row_2 = get_csv_row(&csv_desc_2, index_2).unwrap();
+        let row_1 = match get_csv_row(&csv_desc_1, index_1) {
+            Ok(row) => row,
+            Err(e)  => panic!("failed getting csv row #1: {}", e),
+        };
+
+        let row_2 = match get_csv_row(&csv_desc_2, index_2) {
+            Ok(row) => row,
+            Err(e)  => panic!("failed getting csv row #2: {}", e),
+        };
 
         info!("comparing {}:", row_key);
         info!("line #1: {:?}", row_1);
@@ -305,7 +314,7 @@ For example, ./main file_1.csv "," "'" file_2.csv " " ""
 
         for col in &cols_to_compare {
 
-            let col_index_1 = *csv_col_index_1.get(*col).unwrap(); // TODO: handle me
+            let col_index_1 = *csv_col_index_1.get(*col).unwrap();
             let col_index_2 = *csv_col_index_2.get(*col).unwrap();
 
             info!("column {}, index_1={}, index_2={}", col, col_index_1, col_index_2);
