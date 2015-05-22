@@ -85,7 +85,6 @@ fn get_csv_cols(csv_desc: &CsvDesc) -> Result<Vec<String>, String> {
 }
 
 fn build_index(csv_desc: &CsvDesc) -> Result<HashMap<String, u64>, String> {
-    // TODO it would probably be better to keep a File in the csv descriptor instead of a Path
     let mut csv_index = HashMap::new();
     let csv_file = match File::open(csv_desc.file_path) {
         Err(why) => panic!("couldn't open csv @ {}: {}", csv_desc.file_path.display(), why),
