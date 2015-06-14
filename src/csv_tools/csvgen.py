@@ -3,11 +3,12 @@ import string
 
 MAX_COL_SIZE = 32
 
+
 def col_generator(col_num, quote):
     i = 0
     while i < col_num:
-        col_val = ''.join(random.choice(string.ascii_uppercase + \
-                                        string.ascii_lowercase + \
+        col_val = ''.join(random.choice(string.ascii_uppercase +
+                                        string.ascii_lowercase +
                                         string.digits +
                                         ' ') for _ in range(random.randint(1, MAX_COL_SIZE)))
         yield quote + col_val + quote
@@ -19,6 +20,7 @@ def row_generator(row_num, col_num, delim, quote):
     while i < row_num:
         yield delim.join(col for col in col_generator(col_num, quote))
         i += 1
+
 
 def generate_csv(row_num, col_num, path, delim=',', quote='\''):
     with open(path, 'w+') as f:
