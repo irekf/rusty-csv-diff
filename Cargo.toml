@@ -5,8 +5,7 @@ version = "0.0.1"
 authors = ["Irek Fakhrutdinov <irekfakh@gmail.com>"]
 
 [dependencies]
-docopt = "*"
-rustc-serialize = "*"
-
-[dependencies.log]
-git = "https://github.com/rust-lang/log.git"
+docopt = "0.8"
+serde = "1.0"
+serde_derive = "1.0"
+log = "0.4"

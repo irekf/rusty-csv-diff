@@ -1,28 +1,33 @@
-extern crate rustc_serialize;
+#[macro_use]
+extern crate serde_derive;
 extern crate docopt;
+
 use docopt::Docopt;
 
 #[macro_use]
 extern crate log;
-use log::{LogRecord, LogLevel, LogLevelFilter, LogMetadata};
+use log::{Record, Level, LevelFilter, Metadata};
 
 use std::collections::{HashSet, HashMap};
 use std::fs::File;
 use std::io::{BufRead, BufReader, Seek, SeekFrom};
 use std::path::Path;
 
+static MY_LOGGER: SimpleLogger = SimpleLogger;
 struct SimpleLogger;
 
 impl log::Log for SimpleLogger {
-    fn enabled(&self, metadata: &LogMetadata) -> bool {
-        metadata.level() <= LogLevel::Info
+    fn enabled(&self, metadata: &Metadata) -> bool {
+        metadata.level() <= Level::Info
     }
 
-    fn log(&self, record: &LogRecord) {
+    fn log(&self, record: &Record) {
         if self.enabled(record.metadata()) {
             println!("{} - {}", record.level(), record.args());
         }
     }
+
+    fn flush(&self) {}
 }
 
 struct CsvDesc<'a> {
@@ -95,7 +100,7 @@ fn build_index(csv_desc: &CsvDesc) -> Result<HashMap<String, u64>, String> {
     let mut csv_line_iter = csv_reader.lines();
 
     let mut offset_in_file: u64 = 0;
-    let mut prev_col_num = -1;
+    let mut expected_col_count = 0;
     let mut row_idx = 0;
     loop {
 
@@ -115,13 +120,17 @@ fn build_index(csv_desc: &CsvDesc) -> Result<HashMap<String, u64>, String> {
             }
         };
 
-        let curr_col_num = csv_cols.len();
-        if prev_col_num != -1 && prev_col_num != curr_col_num {
-            return Err(format!("{} columns in row #{}, {} columns in previous row", curr_col_num,
-                                                                                    row_idx,
-                                                                                    prev_col_num));
+        let curr_col_count = csv_cols.len();
+        if curr_col_count == 0 {
+            return Err(format!("zero columns in row{}", row_idx));
         }
-        prev_col_num = curr_col_num;
+
+        if expected_col_count != 0 && expected_col_count != curr_col_count {
+            return Err(format!("{} columns in row #{}, {} expected", curr_col_count,
+                                                                     row_idx,
+                                                                     expected_col_count));
+        }
+        expected_col_count = curr_col_count;
         row_idx += 1;
 
         let key = format!("{}{}", csv_cols[0], csv_cols[1]);
@@ -175,7 +184,7 @@ Options:
     -h, --help        Show this message.
 ";
 
-#[derive(RustcDecodable, Debug)]
+#[derive(Debug, Deserialize)]
 struct Args {
     arg_csv1: String,
     arg_delim1: String,
@@ -208,14 +217,12 @@ For example, ./main file_1.csv "," "'" file_2.csv " " ""
 */
 
     /*** 0 ***/
-    log::set_logger(|max_log_level| {
-        max_log_level.set(LogLevelFilter::Error);
-        Box::new(SimpleLogger)
-    }).unwrap();
+    log::set_logger(&MY_LOGGER).unwrap();
+    log::set_max_level(LevelFilter::Error);
 
     /*** 1 ***/
     let args: Args = Docopt::new(USAGE)
-                            .and_then(|d| d.decode())
+                            .and_then(|d| d.deserialize())
                             .unwrap_or_else(|e| e.exit());
 
     let csv_desc_1: CsvDesc = match parse_args(&args.arg_csv1, &args.arg_delim1, &args.arg_quote1) {
