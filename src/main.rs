@@ -1,14 +1,14 @@
+extern crate docopt;
 #[macro_use]
 extern crate serde_derive;
-extern crate docopt;
 
 use docopt::Docopt;
 
 #[macro_use]
 extern crate log;
-use log::{Record, Level, LevelFilter, Metadata};
+use log::{Level, LevelFilter, Metadata, Record};
 
-use std::collections::{HashSet, HashMap};
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{BufRead, BufReader, Seek, SeekFrom};
 use std::path::Path;
@@ -31,38 +31,51 @@ impl log::Log for SimpleLogger {
 }
 
 struct CsvDesc<'a> {
-    file_path: &'a  Path,
-    delimiter:      char,
-    quote:          Option<char>,
+    file_path: &'a Path,
+    delimiter: char,
+    quote: Option<char>,
 }
 
 impl<'a> std::fmt::Display for CsvDesc<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{} {} {:?}", self.file_path.display(), self.delimiter, self.quote)
+        write!(
+            f,
+            "{} {} {:?}",
+            self.file_path.display(),
+            self.delimiter,
+            self.quote
+        )
     }
 }
 
-fn parse_args<'a>(path_arg:         &'a String,
-                  delimiter_arg:    &'a String,
-                  quote_arg:        &'a String) -> Result<CsvDesc<'a>, &'static str>
-{
-
+fn parse_args<'a>(
+    path_arg: &'a String,
+    delimiter_arg: &'a String,
+    quote_arg: &'a String,
+) -> Result<CsvDesc<'a>, &'static str> {
     let csv_file_path = Path::new(path_arg);
 
     let csv_delimiter = match delimiter_arg.chars().next() {
-                            Some(result) => result,
-                            None         => return Err("incorrect delimiter"),
-                        };
+        Some(result) => result,
+        None => return Err("incorrect delimiter"),
+    };
 
-    let csv_quote     = quote_arg.chars().next();
+    let csv_quote = quote_arg.chars().next();
 
-    Ok(CsvDesc {file_path: &csv_file_path, delimiter: csv_delimiter, quote: csv_quote})
+    Ok(CsvDesc {
+        file_path: &csv_file_path,
+        delimiter: csv_delimiter,
+        quote: csv_quote,
+    })
 }
 
 fn get_csv_cols(csv_desc: &CsvDesc) -> Result<Vec<String>, String> {
-
     let csv_file = match File::open(csv_desc.file_path) {
-        Err(why) => panic!("couldn't open csv @ {}: {}", csv_desc.file_path.display(), why),
+        Err(why) => panic!(
+            "couldn't open csv @ {}: {}",
+            csv_desc.file_path.display(),
+            why
+        ),
         Ok(file) => file,
     };
 
@@ -72,17 +85,17 @@ fn get_csv_cols(csv_desc: &CsvDesc) -> Result<Vec<String>, String> {
 
     let csv_header: String = match csv_line_iter.next() {
         Some(result) => match result {
-                            Err(why) => return Err(format!("error getting csv header: {}", why)),
-                            Ok(header) => header,
-                        },
-        None         => return Err("csv header reading failed".to_string()),
+            Err(why) => return Err(format!("error getting csv header: {}", why)),
+            Ok(header) => header,
+        },
+        None => return Err("csv header reading failed".to_string()),
     };
 
     let csv_cols: Vec<String> = {
         let cols_iter = csv_header.split(csv_desc.delimiter);
         match csv_desc.quote {
-            Some(q) => cols_iter.map(|s| {s.trim_matches(q).to_string()}).collect(),
-            None    => cols_iter.map(|s| {s.to_string()}).collect(),
+            Some(q) => cols_iter.map(|s| s.trim_matches(q).to_string()).collect(),
+            None => cols_iter.map(|s| s.to_string()).collect(),
         }
     };
 
@@ -92,7 +105,11 @@ fn get_csv_cols(csv_desc: &CsvDesc) -> Result<Vec<String>, String> {
 fn build_index(csv_desc: &CsvDesc) -> Result<HashMap<String, u64>, String> {
     let mut csv_index = HashMap::new();
     let csv_file = match File::open(csv_desc.file_path) {
-        Err(why) => panic!("couldn't open csv @ {}: {}", csv_desc.file_path.display(), why),
+        Err(why) => panic!(
+            "couldn't open csv @ {}: {}",
+            csv_desc.file_path.display(),
+            why
+        ),
         Ok(file) => file,
     };
 
@@ -103,20 +120,19 @@ fn build_index(csv_desc: &CsvDesc) -> Result<HashMap<String, u64>, String> {
     let mut expected_col_count = 0;
     let mut row_idx = 0;
     loop {
-
         let csv_row: String = match csv_line_iter.next() {
             Some(result) => match result {
-                                Err(why) => return Err(format!("error getting csv row: {}", why)),
-                                Ok(header) => header,
-                            },
-            None         => break,
+                Err(why) => return Err(format!("error getting csv row: {}", why)),
+                Ok(header) => header,
+            },
+            None => break,
         };
 
         let csv_cols: Vec<String> = {
             let cols_iter = csv_row.split(csv_desc.delimiter);
             match csv_desc.quote {
-                Some(q) => cols_iter.map(|s| {s.trim_matches(q).to_string()}).collect(),
-                None    => cols_iter.map(|s| {s.to_string()}).collect(),
+                Some(q) => cols_iter.map(|s| s.trim_matches(q).to_string()).collect(),
+                None => cols_iter.map(|s| s.to_string()).collect(),
             }
         };
 
@@ -126,9 +142,10 @@ fn build_index(csv_desc: &CsvDesc) -> Result<HashMap<String, u64>, String> {
         }
 
         if expected_col_count != 0 && expected_col_count != curr_col_count {
-            return Err(format!("{} columns in row #{}, {} expected", curr_col_count,
-                                                                     row_idx,
-                                                                     expected_col_count));
+            return Err(format!(
+                "{} columns in row #{}, {} expected",
+                curr_col_count, row_idx, expected_col_count
+            ));
         }
         expected_col_count = curr_col_count;
         row_idx += 1;
@@ -143,9 +160,12 @@ fn build_index(csv_desc: &CsvDesc) -> Result<HashMap<String, u64>, String> {
 }
 
 fn get_csv_row(csv_desc: &CsvDesc, line_offset: u64) -> Result<Vec<String>, String> {
-
     let mut csv_file = match File::open(csv_desc.file_path) {
-        Err(why) => panic!("couldn't open csv @ {}: {}", csv_desc.file_path.display(), why),
+        Err(why) => panic!(
+            "couldn't open csv @ {}: {}",
+            csv_desc.file_path.display(),
+            why
+        ),
         Ok(file) => file,
     };
 
@@ -157,7 +177,7 @@ fn get_csv_row(csv_desc: &CsvDesc, line_offset: u64) -> Result<Vec<String>, Stri
     let mut row_buff = String::new();
 
     match csv_reader.read_line(&mut row_buff) {
-        Ok(_n)  => {
+        Ok(_n) => {
             if row_buff.ends_with("\n") {
                 row_buff.pop();
             }
@@ -168,8 +188,8 @@ fn get_csv_row(csv_desc: &CsvDesc, line_offset: u64) -> Result<Vec<String>, Stri
     let result: Vec<String> = {
         let cols_iter = row_buff.split(csv_desc.delimiter);
         match csv_desc.quote {
-            Some(q) => cols_iter.map(|s| {s.trim_matches(q).to_string()}).collect(),
-            None    => cols_iter.map(|s| {s.to_string()}).collect(),
+            Some(q) => cols_iter.map(|s| s.trim_matches(q).to_string()).collect(),
+            None => cols_iter.map(|s| s.to_string()).collect(),
         }
     };
 
@@ -195,19 +215,19 @@ struct Args {
 }
 
 fn main() {
-
-/*
+    /*
 
 1. Parse arguments
 2. Open CSV files
 3. Get columns (cols_N)
 4. Get intersection of those two sets of columns(cols_to_compare)
 5. Create {column name : column index in cols_N} dicts
-6. Create {CSV_col_value : CSV row index in file} dicts, where CSV_col_value is a unique key made of the value of several CSV columns.
-   For example, {Alex38 : 76}. In this example a name and age form a unique key for the 76th CSV row.
+6. Create {CSV_col_value : CSV row index in file} dicts,
+   where CSV_col_value is a unique key made of the value of several CSV columns.
+   For example, {Alex38 : 76}. Here the name and age form a unique key for the 76th CSV row.
 7. Get intersection of key sets of dicts from step 6 (row_keys_to_compare)
 8. Loop through row_keys_to_compare, use dicts from step 6 to get line numbers for CSV files
-    8.1 Loop through cols_to_compare, use dicts from step 5 to extract column values from CSV rows(step 8)
+    8.1 Loop through cols_to_compare, use dicts from step 5 to extract column values from CSV rows
     8.2 Compare values
 
 Input parameters: CSV paths, delimiters, quotes
@@ -222,17 +242,17 @@ For example, ./main file_1.csv "," "'" file_2.csv " " ""
 
     /*** 1 ***/
     let args: Args = Docopt::new(USAGE)
-                            .and_then(|d| d.deserialize())
-                            .unwrap_or_else(|e| e.exit());
+        .and_then(|d| d.deserialize())
+        .unwrap_or_else(|e| e.exit());
 
     let csv_desc_1: CsvDesc = match parse_args(&args.arg_csv1, &args.arg_delim1, &args.arg_quote1) {
-        Err(why)    => panic!("error parsing arguments for CSV #1: {}", why),
-        Ok(result)  => result,
+        Err(why) => panic!("error parsing arguments for CSV #1: {}", why),
+        Ok(result) => result,
     };
 
     let csv_desc_2: CsvDesc = match parse_args(&args.arg_csv2, &args.arg_delim2, &args.arg_quote2) {
-        Err(why)    => panic!("error parsing arguments for CSV #2: {}", why),
-        Ok(result)  => result,
+        Err(why) => panic!("error parsing arguments for CSV #2: {}", why),
+        Ok(result) => result,
     };
 
     /*** 2&3 ***/
@@ -279,13 +299,12 @@ For example, ./main file_1.csv "," "'" file_2.csv " " ""
     /*** 6 ***/
     // let's assume that the unique key is (col_0 + col_1)
     let csv_index_1 = match build_index(&csv_desc_1) {
-        Err(why)  => panic!("failed building index #1: {}", why),
+        Err(why) => panic!("failed building index #1: {}", why),
         Ok(index) => index,
     };
 
-
     let csv_index_2 = match build_index(&csv_desc_2) {
-        Err(why)  => panic!("failed building index #2: {}", why),
+        Err(why) => panic!("failed building index #2: {}", why),
         Ok(index) => index,
     };
 
@@ -300,18 +319,17 @@ For example, ./main file_1.csv "," "'" file_2.csv " " ""
 
     /*** 8 ***/
     for row_key in row_keys_to_compare {
-
         let index_1 = *csv_index_1.get(row_key).unwrap();
         let index_2 = *csv_index_2.get(row_key).unwrap();
 
         let row_1 = match get_csv_row(&csv_desc_1, index_1) {
             Ok(row) => row,
-            Err(e)  => panic!("failed getting csv row #1: {}", e),
+            Err(e) => panic!("failed getting csv row #1: {}", e),
         };
 
         let row_2 = match get_csv_row(&csv_desc_2, index_2) {
             Ok(row) => row,
-            Err(e)  => panic!("failed getting csv row #2: {}", e),
+            Err(e) => panic!("failed getting csv row #2: {}", e),
         };
 
         info!("comparing {}:", row_key);
@@ -319,17 +337,20 @@ For example, ./main file_1.csv "," "'" file_2.csv " " ""
         info!("line #2: {:?}", row_2);
 
         for col in &cols_to_compare {
-
             let col_index_1 = *csv_col_index_1.get(*col).unwrap();
             let col_index_2 = *csv_col_index_2.get(*col).unwrap();
 
-            info!("column {}, index_1={}, index_2={}", col, col_index_1, col_index_2);
+            info!(
+                "column {}, index_1={}, index_2={}",
+                col, col_index_1, col_index_2
+            );
 
             if row_1[col_index_1] != row_2[col_index_2] {
-                println!("found a difference for {}, {}: {} / {}", row_key, col, row_1[col_index_1], row_2[col_index_2]);
+                println!(
+                    "found a difference for {}, {}: {} / {}",
+                    row_key, col, row_1[col_index_1], row_2[col_index_2]
+                );
             }
         }
-
     }
-
 }
